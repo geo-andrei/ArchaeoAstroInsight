@@ -1,0 +1,31 @@
+# Core scientific (Py 3.12 compatible)
+numpy==1.26.4
+scipy==1.14.1
+matplotlib==3.9.2
+pandas==2.2.3
+scikit-learn==1.5.2
+
+# Computer vision + utils
+opencv-python-headless==4.10.0.84
+Pillow==10.4.0
+requests==2.32.3
+tqdm==4.66.5
+PyYAML==6.0.2
+psutil==6.0.0
+
+# PyTorch CPU (for Ultralytics runtime)
+torch==2.4.1
+torchvision==0.19.1
+
+# TensorFlow / Keras (CPU)
+tensorflow==2.18.1
+
+# Quiet resolver warnings some environments hit
+pydantic==2.11.7
+pydantic-core==2.33.2
+
+# YOLOv11 runtime
+ultralytics==8.3.54
+
+# Keras import-time dependency; must match NumPy 1.26.x ABI
+h5py==3.11.0

@@ -1,0 +1,27 @@
+pip==24.2
+setuptools==80.9.0
+wheel==0.44.0
+
+# ---------- Core scientific ----------
+numpy==2.0.2
+scipy==1.14.1
+matplotlib==3.9.2
+pandas==2.2.3
+scikit-learn==1.5.2
+
+# ---------- Computer vision ----------
+opencv-python-headless==4.10.0.84
+Pillow==10.4.0
+
+# ---------- PyTorch (CPU) for Ultralytics ----------
+torch==2.4.1
+torchvision==0.19.1
+
+# ---------- Utilities ----------
+PyYAML==6.0.2
+tqdm==4.66.5
+requests==2.32.3
+psutil==6.0.0
+
+# ---------- TensorFlow / Keras (CPU) ----------
+tensorflow==2.18.*
