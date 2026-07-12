@@ -234,7 +234,7 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
         if hasattr(self, "resnetModelBrowseBtn"):
             self.resnetModelBrowseBtn.clicked.connect(_pick_resnet)
 
-        # 4) Master toggle for "Also export crops" — gates azimuth + resnet
+        # 4) Master toggle for "Also export crops": gates azimuth + resnet
         def _toggle_export(on: bool):
             # export folder widgets
             for wname in ("exportDirEdit", "exportBrowseBtn"):

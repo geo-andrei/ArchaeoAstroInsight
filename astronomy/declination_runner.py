@@ -274,7 +274,7 @@ def run_declination_pipeline(
     else:
         raise ValueError("Unknown azimuth_source: {}".format(azimuth_source))
         
-    # 🔍 DEBUG BLOCK
+    # DEBUG BLOCK
     print("\n==============================")
     print(f"[DEBUG] AZIMUTH SOURCE: {azimuth_source}")
     print("[DEBUG] df_mean columns:", df_mean.columns.tolist())
@@ -315,7 +315,7 @@ def run_declination_pipeline(
     for i, (_, row) in enumerate(df_mean.iterrows()):
         az = float(row["azimuth_deg"])
 
-        # 🔍 DEBUG (only first few rows)
+        # DEBUG (only first few rows)
         if i < 5:
             print(f"[DEBUG] Row {i} → azimuth_deg = {az}")
 

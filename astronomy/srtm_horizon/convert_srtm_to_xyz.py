@@ -93,7 +93,7 @@ def convert_srtm_to_xyz(latitude, longitude, srtm_folder, output_file=None,
     Returns
     -------
     tuple(float, np.ndarray, np.ndarray, np.ndarray)
-        ``(closest_elev, lon, lat, elev)`` — the elevation (metres) at the grid
+        ``(closest_elev, lon, lat, elev)``: the elevation (metres) at the grid
         point closest to the observer, and the point-cloud arrays.
     """
     from osgeo import gdal
@@ -186,7 +186,7 @@ def convert_srtm_to_xyz(latitude, longitude, srtm_folder, output_file=None,
             if nodata is not None:
                 data[data == float(nodata)] = np.nan
 
-        print("[SRTM] Reading tile {} — {}x{} px, step={} → "
+        print("[SRTM] Reading tile {}: {}x{} px, step={} → "
               "{}x{}={} pts (from {}x{})".format(
                   os.path.basename(ti['path']),
                   ti['win_cols'], ti['win_rows'], step,

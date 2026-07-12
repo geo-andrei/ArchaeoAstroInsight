@@ -633,12 +633,12 @@ class ArcheDetection:
             QSettings().setValue("ArcheDetection/model_path", model_path)
         
 
-        # Progress dialog (modal) — stays up until EVERYTHING is finished
+        # Progress dialog (modal): stays up until EVERYTHING is finished
         prog = QProgressDialog("Running YOLO detection…", "Cancel", 0, 100, self.iface.mainWindow())
-        prog.setWindowTitle("ArchaeoAstroInsight  – Progress")
+        prog.setWindowTitle("ArchaeoAstroInsight: Progress")
         prog.setWindowModality(Qt.WindowModal)
         prog.setMinimumDuration(0)
-        prog.setAutoClose(False)   # keep control; we’ll close explicitly at the very end
+        prog.setAutoClose(False)   # keep control; we'll close explicitly at the very end
         prog.setAutoReset(True)
         prog.setValue(0)
 
@@ -697,7 +697,7 @@ class ArcheDetection:
 
                 self.iface.messageBar().pushInfo("ArchaeoAstroInsight ", f"Using polygons layer: {detections_layer.name()}")
                 prog.setLabelText("Processing existing polygons…")
-                _set_progress(80)  # we’ll reuse the same 80–100% export window below
+                _set_progress(80)  # we'll reuse the same 80-100% export window below
 
 
             # ---- Optional export (80..100%) ----
@@ -728,7 +728,7 @@ class ArcheDetection:
                     vector_layer_obj=detections_layer  # use the exact layer we just created
                 )
             else:
-                # no export requested — jump to 100
+                # no export requested: jump to 100
                 _set_progress(100)
                 
             # ... inside the try: block, right after export_crops(...) call succeeded

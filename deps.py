@@ -49,7 +49,7 @@ def ensure_modules(
     parent_widget,
     *,
     ask_user: bool = True,
-    title: str = "ArchaeoAstroInsight – Missing Python packages",
+    title: str = "ArchaeoAstroInsight: Missing Python packages",
 ) -> Tuple[bool, str]:
     """
     Ensure modules in `required` (module -> pip package) are importable.

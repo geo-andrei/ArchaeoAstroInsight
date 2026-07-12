@@ -76,7 +76,7 @@ def export_crops(
     total_features = len(feats)
     exported = 0
 
-    # Use up to 3 bands for RGB-like crops; if only 1 band exists, we’ll replicate to 3
+    # Use up to 3 bands for RGB-like crops; if only 1 band exists, we'll replicate to 3
     band_count = min(3, provider.bandCount())
     if band_count <= 0:
         iface.messageBar().pushCritical("ArchaeoAstroInsight ", "No bands available in raster.")

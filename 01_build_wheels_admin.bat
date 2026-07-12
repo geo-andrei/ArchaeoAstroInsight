@@ -27,7 +27,7 @@ REM Download Ultralytics wheel itself WITHOUT dependencies (to avoid GUI OpenCV)
 REM Download astrocult (TestPyPI) + multipledispatch, no deps (pure-python curvigram lib)
 "%QPY%" -m pip download --no-deps --ignore-requires-python -d wheels --index-url https://test.pypi.org/simple/ astrocult
 "%QPY%" -m pip download --no-deps -d wheels multipledispatch
-REM skyfield (+ jplephem, sgp4) — needed by astrocult's declination curvigrams
+REM skyfield (+ jplephem, sgp4): needed by astrocult's declination curvigrams
 "%QPY%" -m pip download --no-deps -d wheels skyfield jplephem sgp4
 
 echo.

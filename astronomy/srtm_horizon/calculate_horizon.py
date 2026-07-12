@@ -43,7 +43,7 @@ def _dip_azimuth(lat1, lon1, alt1, lat2, lon2, alt2):
     th2 = np.radians(lat2)
     ph2 = np.radians(lon2)
 
-    # Azimuth from initial bearing (great-circle) — degrees.
+    # Azimuth from initial bearing (great-circle), in degrees.
     a = np.sin(ph2 - ph1) * np.cos(th2)
     b = np.cos(th1) * np.sin(th2) - np.sin(th1) * np.cos(th2) * np.cos(ph2 - ph1)
     azimuth = np.degrees(np.arctan2(a, b))

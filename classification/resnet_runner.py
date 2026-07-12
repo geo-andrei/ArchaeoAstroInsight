@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-resnet_runner.py — batch inference for grayscale PNG crops using a Keras .keras model.
+resnet_runner.py: batch inference for grayscale PNG crops using a Keras .keras model.
 
 Features
 - CPU-only, quiet TensorFlow (good citizen inside QGIS).

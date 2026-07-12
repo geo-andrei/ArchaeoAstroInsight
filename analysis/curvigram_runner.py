@@ -158,7 +158,7 @@ def run_curvigram_pipeline(
             skipped.append(run_lab)
             continue
 
-        title = f"Azimuth Curvigram — Run {run_lab} (all files)"
+        title = f"Azimuth Curvigram: Run {run_lab} (all files)"
         fig, ax, new_az, normed, renorm, info = plot_az(
             az,
             latitude=latitude,
@@ -257,7 +257,7 @@ def run_curvigram_from_resnet_csv_single(
     _progress(25)
 
     # Build the curvigram
-    title = "Azimuth Curvigram — ResNet (all predictions)"
+    title = "Azimuth Curvigram: ResNet (all predictions)"
     fig, ax, new_az, normed, renorm, info = plot_az(
         az,
         latitude=latitude,
@@ -354,7 +354,7 @@ def run_declination_curvigrams(
             h_eff_deg=h_eff_deg,
             iterations=iterations,
             save_path=fig_path,
-            title="Declination Curvigram — ResNet ({})".format(method),
+            title="Declination Curvigram: ResNet ({})".format(method),
         )
         out[method] = fig_path
         _progress(int(100 * idx / max(1, len(targets))))

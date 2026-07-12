@@ -2,9 +2,9 @@
 High-level SRTM horizon pipeline.
 
 Orchestrates the three stages:
-    1. convert_srtm_to_xyz  – extract lon/lat/elev from SRTM raster tiles
-    2. calculate_horizon    – compute azimuth / dip-angle / distance (NumPy)
-    3. aggregate_horizon    – bin and aggregate into a horizon profile
+    1. convert_srtm_to_xyz: extract lon/lat/elev from SRTM raster tiles
+    2. calculate_horizon: compute azimuth / dip-angle / distance (NumPy)
+    3. aggregate_horizon: bin and aggregate into a horizon profile
 
 The public function ``compute_srtm_horizon()`` returns a dict in the same
 format as ``script.download_hwt()``, so the rest of the plugin (declination,
@@ -72,7 +72,7 @@ def compute_srtm_horizon(latitude, longitude, srtm_folder, plugin_dir=None,
 
     observer_elev = observer_ground_elev + _OBSERVER_HEIGHT
     t1_elapsed = time.time() - t1
-    print("[SRTM] Stage 1 done in {:.1f}s — observer elevation: {:.1f}m "
+    print("[SRTM] Stage 1 done in {:.1f}s, observer elevation: {:.1f}m "
           "(+{:.0f}m height = {:.1f}m), {} terrain points".format(
               t1_elapsed, observer_ground_elev, _OBSERVER_HEIGHT,
               observer_elev, len(lon)))
@@ -92,7 +92,7 @@ def compute_srtm_horizon(latitude, longitude, srtm_folder, plugin_dir=None,
             "Horizon topography computation failed: {}".format(e)) from e
 
     t2_elapsed = time.time() - t2
-    print("[SRTM] Stage 2 done in {:.1f}s — {} horizon samples".format(
+    print("[SRTM] Stage 2 done in {:.1f}s, {} horizon samples".format(
         t2_elapsed, len(azimuths)))
 
     # --- Stage 3: Aggregate samples into a horizon profile ---
@@ -109,7 +109,7 @@ def compute_srtm_horizon(latitude, longitude, srtm_folder, plugin_dir=None,
 
     t3_elapsed = time.time() - t3
     total_elapsed = time.time() - pipeline_start
-    print("[SRTM] Stage 3 done in {:.1f}s — {} azimuth bins".format(
+    print("[SRTM] Stage 3 done in {:.1f}s, {} azimuth bins".format(
         t3_elapsed, len(horizon)))
     print("[SRTM] ===== SRTM pipeline complete in {:.1f}s =====".format(
         total_elapsed))
