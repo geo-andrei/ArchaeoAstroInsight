@@ -2,16 +2,16 @@
 
 **A QGIS plugin for the archaeoastronomical analysis of ground-level archaeological features.**
 
-ArchaeoAstroInsight detects features in satellite or aerial rasters using a YOLO model, estimates each feature's orientation (azimuth) with a ResNet classifier, derives the local horizon from either the HeyWhatsThat online service or local SRTM elevation data, and computes the astronomical declination of each alignment. It also generates azimuth and declination curvigrams (kernel-density plots with significance thresholds) and writes all results to a single CSV for further analysis.
+ArchaeoAstroInsight detects features in satellite or aerial rasters using a YOLO model, estimates each feature's orientation (azimuth) with a ResNet classifier, derives the local horizon from either the HeyWhatsThat online service or user-provided SRTM elevation data, and computes the astronomical declination of each alignment. It also generates azimuth and declination curvigrams (kernel-density plots with significance thresholds) and writes all results to a single CSV for further analysis.
 
 ---
 
 ## Features
 
-- **Feature detection** — YOLO object detection on satellite/aerial rasters (or use existing polygon layers).
+- **Feature detection** — YOLO object detection on satellite/aerial rasters (or on existing polygon layers).
 - **Azimuth estimation** — a ResNet classifier estimates the orientation of each detected feature.
-- **Horizon computation** — local horizon altitude from the [HeyWhatsThat](https://www.heywhatsthat.com/) online service and/or local **SRTM** elevation tiles.
-- **Declination** — astronomical declination for each feature/horizon combination.
+- **Horizon computation** — local horizon altitude from the [HeyWhatsThat](https://www.heywhatsthat.com/) online service and/or **user-provided SRTM** elevation tiles.
+- **Astronomical declination computation** — computes the declination for each feature/horizon combination.
 - **Curvigrams** — azimuth and declination kernel-density plots with significance thresholds.
 - **Consolidated output** — everything lands in a single `Results/results.csv`, plus curvigram PNGs.
 
@@ -34,7 +34,7 @@ They are installed into QGIS's Python by the included scripts, using pinned vers
 
 ### Nothing else to install — data you provide
 
-Apart from a supported QGIS and the two install scripts, **no other software is required**: there is no separate Python, no C/C++ compiler, and no GPU/CUDA requirement (PyTorch and TensorFlow run on the CPU). You do, however, supply your own **data**:
+Apart from a supported QGIS and the two install scripts, **no other software is required**: there is no separate Python and no C/C++ compiler required. The bundled PyTorch and TensorFlow are CPU builds, so no GPU is needed; if you install a CUDA-enabled PyTorch, the YOLO detection step will automatically use your GPU (the ResNet/TensorFlow step always runs on the CPU). You do, however, supply your own **data**:
 
 - a **YOLO** detection model (`.pt`/`.pth`) and a **ResNet** azimuth model (`.keras`), chosen in the dialog;
 - **SRTM elevation tiles** (a folder of `.hgt` / `.tif` / … rasters) — only if you use the SRTM horizon option. The HeyWhatsThat option needs no local data, just an internet connection.
@@ -102,7 +102,7 @@ Open the plugin from the **Plugins** menu (or its toolbar icon). The dialog is o
 2. **Object detection** → browse to a **YOLO model** (`.pt`/`.pth`); leave Confidence and Tile overlap at their defaults to start.
 3. **Export & Post-processing** → tick **Export object detection crops** and choose an **Output folder**. *(This unlocks the sections below.)*
 4. **Azimuth estimation** → tick **Classify crops using ResNet** and browse to your **ResNet model** (`.keras`).
-5. **Declination computation** → tick **Hey What's That service** and/or **SRTM data** (for SRTM, also pick the tiles folder).
+5. **Astronomical declination computation** → tick **Hey What's That service** and/or **SRTM data** (for SRTM, also pick the tiles folder).
 6. Optionally tick **Generate … curvigram plots**.
 7. Click **OK**. Results land in `<output folder>\Results\` (see [Output](#output)).
 
@@ -130,9 +130,9 @@ Open the plugin from the **Plugins** menu (or its toolbar icon). The dialog is o
 - **Classify crops using ResNet (.keras)** — estimate each feature's orientation (azimuth) with a ResNet classifier. Available only when *Export crops* is on.
 - **ResNet model (.keras)** — your classifier, chosen via **…**. Remembered between sessions.
 
-**5. Declination computation** *(available once the ResNet stage will run)*
+**5. Astronomical declination computation** *(available once the ResNet stage will run)*
 - **Hey What's That service** — derive the local horizon from the online [HeyWhatsThat](https://www.heywhatsthat.com/) service (needs internet, no local data).
-- **SRTM data** — derive the horizon from your own local SRTM elevation tiles instead (works offline).
+- **SRTM data** — derive the horizon from your own SRTM elevation tiles instead (works offline).
 - **SRTM folder** — the folder of SRTM tiles (enabled when *SRTM data* is ticked). You may tick **both** horizon methods to compute and compare each.
 
 **6. Generate azimuth and declination curvigram plots**
@@ -140,7 +140,7 @@ Open the plugin from the **Plugins** menu (or its toolbar icon). The dialog is o
 
 **OK / Cancel** — **OK** runs the pipeline; **Cancel** closes the dialog without running.
 
-> **Models are not bundled:** you supply your own YOLO (`.pt`/`.pth`) and ResNet (`.keras`) models via the dialog.
+> **Models are not bundled:** you supply your own YOLO (`.pt`/`.pth`) and ResNet (`.keras`) models via the dialog. If you need to train your own models, the authors offer a **free online training service** on the UVT GPU server at http://194.102.62.172 — request an account there to use it.
 
 ### Output
 
@@ -160,6 +160,10 @@ West University of Timișoara (UVT)
 
 Contact: andrei.ancuta@e-uvt.ro
 
+## Acknowledgements
+
+This project has been supported by a grant of the Ministry of Research, Innovation and Digitization, CNCS/CCCDI - UEFISCDI, project number ERANET-CHISTERA-IV-AI4MultiGIS, within PNCDI IV.
+
 ## License
 
-Released under the **GNU General Public License v2.0** — see [`LICENSE`](LICENSE).
+Released under the **GNU General Public License v3.0** — see [`LICENSE`](LICENSE).

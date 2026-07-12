@@ -5,12 +5,12 @@
 [general]
 name=ArchaeoAstroInsight
 qgisMinimumVersion=3.0
-description=Detects archaeological features in satellite and aerial imagery and computes their archaeoastronomical alignment.
+description=Detects archaeological features in satellite and aerial imagery and computes their archaeoastronomical alignment by using AI algorithms.
 version=0.1
 author=Andrei Ancuta, Helga Hochbauer, Maitane Urrutia, Marc Frincu
 email=andrei.ancuta@e-uvt.ro
 
-about=ArchaeoAstroInsight is a QGIS plugin for the archaeoastronomical analysis of ground-level archaeological features. It detects features in satellite or aerial rasters using a YOLO model, estimates each feature's orientation (azimuth) with a ResNet classifier, derives the local horizon from either the HeyWhatsThat online service or local SRTM elevation data, and computes the astronomical declination of each alignment. It also generates azimuth and declination curvigrams (kernel-density plots with significance thresholds) and writes all results to a single CSV for further analysis. It requires external Python packages (PyTorch, TensorFlow, Ultralytics and others) that are not bundled with the plugin; see the installation instructions in the repository README.
+about=ArchaeoAstroInsight is a QGIS plugin for the archaeoastronomical analysis of ground-level archaeological features. It detects features in satellite or aerial rasters using a YOLO model, estimates each feature's orientation (azimuth) with a ResNet classifier, derives the local horizon from either the HeyWhatsThat online service or user-provided SRTM elevation data, and computes the astronomical declination of each alignment. It also generates azimuth and declination curvigrams (kernel-density plots with significance thresholds) and writes all results to a single CSV for further analysis. It requires external Python packages (PyTorch, TensorFlow, Ultralytics and others) that are not bundled with the plugin; see the installation instructions in the repository README.
 
 tracker=https://github.com/geo-andrei/ArchaeoAstroInsight/issues
 repository=https://github.com/geo-andrei/ArchaeoAstroInsight

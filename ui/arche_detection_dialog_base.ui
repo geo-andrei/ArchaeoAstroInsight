@@ -316,7 +316,7 @@
           <bool>true</bool>
          </property>
          <property name="title">
-          <string>Declination computation</string>
+          <string>Astronomical declination computation</string>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
           <item>
