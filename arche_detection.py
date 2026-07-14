@@ -22,6 +22,7 @@
  ***************************************************************************/
 """
 
+import logging
 import sys
 class _NullWriter:
     def write(self, *args, **kwargs): pass
@@ -32,24 +33,12 @@ if getattr(sys, "stdout", None) is None:
     sys.stdout = _NullWriter()
 # -------------------------------------------------------
 
-from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication
-from qgis.PyQt.QtGui import QIcon
-from qgis.PyQt.QtWidgets import QAction
+from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
+from qgis.PyQt.QtGui import QIcon, QCursor
+from qgis.PyQt.QtWidgets import (
+    QAction, QApplication, QFileDialog, QProgressDialog,
+)
 from qgis.core import QgsProject
-from qgis.core import QgsProject, QgsApplication, Qgis
-from PyQt5.QtWidgets import QProgressBar
-from qgis.PyQt.QtWidgets import QApplication
-from qgis.PyQt.QtGui import QCursor
-from qgis.PyQt.QtCore import Qt
-from PyQt5.QtWidgets import QFileDialog, QApplication
-from PyQt5.QtGui import QCursor
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QApplication, QFileDialog
-from PyQt5.QtGui import QCursor
-from PyQt5.QtCore import Qt
-from qgis.PyQt.QtWidgets import QApplication, QProgressDialog
-from qgis.PyQt.QtGui import QCursor
-from qgis.PyQt.QtCore import Qt
 import importlib
 
 # ---------------------------------------------------------------------------
@@ -127,8 +116,8 @@ def force_qgis_python_exe():
 
             # Helps on Windows embedded/frozen-ish contexts
             mp.freeze_support()
-    except Exception:
-        pass
+    except Exception as _exc:
+        logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
 force_qgis_python_exe()
 
@@ -330,12 +319,12 @@ class ArcheDetection:
                 layer_id = self.dlg.rasterCombo.currentData()
                 if layer_id:
                     raster_layer = QgsProject.instance().mapLayer(layer_id)
-        except Exception:
-            pass
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
         if raster_layer is None:
             raster_layer = self.iface.activeLayer()
 
-        if raster_layer is None or raster_layer.type() != raster_layer.RasterLayer:
+        if raster_layer is None or raster_layer.type() != raster_layer.LayerType.RasterLayer:
             self.iface.messageBar().pushWarning("ArchaeoAstroInsight ", "Please select a raster layer.")
             return
 
@@ -361,7 +350,7 @@ class ArcheDetection:
             QApplication.processEvents()
 
         try:
-            QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            QApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
             self.iface.messageBar().pushInfo("ArchaeoAstroInsight ", "Exporting YOLO crops…")
             export_crops(
                 raster_layer=raster_layer,
@@ -488,7 +477,8 @@ class ArcheDetection:
             model = MODEL_NAME.get(az_src, az_src)
             try:
                 df = pd.read_csv(path)
-            except Exception:
+            except Exception as _exc:
+                logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
                 continue
             cols = df.columns
             for _, r in df.iterrows():
@@ -523,8 +513,8 @@ class ArcheDetection:
                         fn = str(r["filename"]).strip()
                         if fn:
                             _cell(fn)["Azimuth Resnet Model (deg)"] = r["azimuth_deg"]
-            except Exception:
-                pass
+            except Exception as _exc:
+                logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
         if not table:
             return None
@@ -569,8 +559,8 @@ class ArcheDetection:
             self.iface.messageBar().pushInfo(
                 "ArchaeoAstroInsight ", f"Centralized results saved: {out_path}"
             )
-        except Exception:
-            pass
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
         print(f"[ArchaeoAstroInsight ] Centralized results saved to: {out_path}")
         return out_path
 
@@ -591,7 +581,7 @@ class ArcheDetection:
 
         # Show dialog
         self.dlg.show()
-        if not self.dlg.exec_():
+        if not self.dlg.exec():
             return
 
         # Inputs
@@ -636,7 +626,7 @@ class ArcheDetection:
         # Progress dialog (modal): stays up until EVERYTHING is finished
         prog = QProgressDialog("Running YOLO detection…", "Cancel", 0, 100, self.iface.mainWindow())
         prog.setWindowTitle("ArchaeoAstroInsight: Progress")
-        prog.setWindowModality(Qt.WindowModal)
+        prog.setWindowModality(Qt.WindowModality.WindowModal)
         prog.setMinimumDuration(0)
         prog.setAutoClose(False)   # keep control; we'll close explicitly at the very end
         prog.setAutoReset(True)
@@ -668,7 +658,7 @@ class ArcheDetection:
 
         detections_layer = None
         try:
-            QApplication.setOverrideCursor(QCursor(Qt.WaitCursor))
+            QApplication.setOverrideCursor(QCursor(Qt.CursorShape.WaitCursor))
 
             if not polygon_mode:
                 # ---- YOLO path ----
@@ -981,16 +971,16 @@ class ArcheDetection:
                                + glob.glob(os.path.join(fr_dir, "*.txt"))):
                         try:
                             os.remove(_p)
-                        except Exception:
-                            pass
+                        except Exception as _exc:
+                            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
                     # Remove the working folders only if nothing important remains
                     for _d in (fr_dir, tr_dir):
                         try:
                             if os.path.isdir(_d) and not os.listdir(_d):
                                 os.rmdir(_d)
-                        except Exception:
-                            pass
+                        except Exception as _exc:
+                            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
                 except Exception as _e:
                     self.iface.messageBar().pushWarning("ArchaeoAstroInsight ", f"Results consolidation skipped: {_e}")
 
@@ -1012,8 +1002,8 @@ class ArcheDetection:
                 prog.setValue(100)
                 prog.close()
                 QApplication.processEvents()
-            except Exception:
-                pass
+            except Exception as _exc:
+                logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
             QApplication.restoreOverrideCursor()
 
              

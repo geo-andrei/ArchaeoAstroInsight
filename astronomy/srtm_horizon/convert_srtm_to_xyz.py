@@ -10,6 +10,7 @@ Uses GDAL (always available inside QGIS) to read SRTM tiles in any format
 Original R script by Sherry Towers (smtowers@asu.edu), Nov 2013.
 Python port for the A2i QGIS plugin.
 """
+import logging
 import os
 import numpy as np
 
@@ -55,7 +56,8 @@ def find_srtm_tiles(srtm_folder, min_lon, max_lon, min_lat, max_lat):
             if (tile_max_lon > min_lon and tile_min_lon < max_lon and
                     tile_max_lat > min_lat and tile_min_lat < max_lat):
                 tiles.append(filepath)
-        except Exception:
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
             continue
 
     return tiles

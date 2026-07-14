@@ -1,8 +1,9 @@
 # curvigram_runner.py
 from __future__ import annotations
+import logging
 import os
 import glob
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -32,7 +33,8 @@ def _find_csv_with_required_columns(root: str, required=("filename", "run_index"
             df_head = pd.read_csv(p, nrows=5)
             if all(c in df_head.columns for c in required):
                 return p
-        except Exception:
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
             continue
     raise FileNotFoundError(
         f"No CSV with columns {required} found in: {root}"
@@ -219,8 +221,8 @@ def run_curvigram_from_resnet_csv_single(
         try:
             if progress_cb:
                 progress_cb(int(max(0, min(100, p))))
-        except Exception:
-            pass
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     _progress(0)
 
@@ -315,8 +317,8 @@ def run_declination_curvigrams(
         try:
             if progress_cb:
                 progress_cb(int(max(0, min(100, p))))
-        except Exception:
-            pass
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     if not os.path.isfile(results_csv_path):
         raise FileNotFoundError("results.csv not found: {}".format(results_csv_path))

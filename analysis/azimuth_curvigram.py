@@ -23,6 +23,7 @@ It returns the same 6-tuple: (fig, ax, new_az, normed_density, renorm_density, i
 """
 from __future__ import annotations
 
+import logging
 import numpy as np
 
 
@@ -111,8 +112,8 @@ def plot_az(
         for eps in (obliquity_deg, -obliquity_deg):
             try:
                 ref_lines.append(float(azobj.calc_az(0.0, float(latitude), float(eps), True)))
-            except Exception:
-                pass
+            except Exception as _exc:
+                logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
         ref_lines += [90.0, 270.0]
 
     return HF.plot_curvigram(

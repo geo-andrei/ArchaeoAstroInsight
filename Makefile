@@ -188,16 +188,14 @@ transup:
 	@echo "------------------------------------------------"
 	@echo "Updating translation files with any new strings."
 	@echo "------------------------------------------------"
-	@chmod +x scripts/update-strings.sh
-	@scripts/update-strings.sh $(LOCALES)
+	@echo "Translation helper scripts were removed; run pylupdate5 on the .py/.ui files manually."
 
 transcompile:
 	@echo
 	@echo "----------------------------------------"
 	@echo "Compiled translation files to .qm files."
 	@echo "----------------------------------------"
-	@chmod +x scripts/compile-strings.sh
-	@scripts/compile-strings.sh $(LRELEASE) $(LOCALES)
+	@echo "Translation helper scripts were removed; run lrelease on the .ts files manually."
 
 transclean:
 	@echo

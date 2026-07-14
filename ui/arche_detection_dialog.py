@@ -22,6 +22,7 @@
  ***************************************************************************/
 """
 
+import logging
 import os
 
 from qgis.PyQt import uic, QtWidgets
@@ -130,8 +131,8 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
                     w = getattr(self, name, None)
                     if w and hasattr(w, "y") and w.y() >= base_y:
                         w.move(w.x(), w.y() + delta)
-            except Exception:
-                pass
+            except Exception as _exc:
+                logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
         # Restore last-used overlap percent (default 25)
         last_overlap = settings.value("ArcheDetection/tile_overlap_percent", 25, type=int)
@@ -157,7 +158,7 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
         def _populate_polygon_layers():
             self.polygonLayerCombo.clear()
             for lyr in QgsProject.instance().mapLayers().values():
-                if isinstance(lyr, QgsVectorLayer) and QgsWkbTypes.geometryType(lyr.wkbType()) == QgsWkbTypes.PolygonGeometry:
+                if isinstance(lyr, QgsVectorLayer) and QgsWkbTypes.geometryType(lyr.wkbType()) == QgsWkbTypes.GeometryType.PolygonGeometry:
                     self.polygonLayerCombo.addItem(lyr.name(), lyr.id())
 
         _populate_polygon_layers()
@@ -251,8 +252,8 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
             # update sub-controls
             try:
                 _update_mc_controls()  # defined below
-            except Exception:
-                pass
+            except Exception as _exc:
+                logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
             # resnet path widgets depend on BOTH export and resnet checkbox
             _toggle_resnet(self.resnetCheck.isChecked() if hasattr(self, "resnetCheck") else False)
@@ -422,7 +423,7 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
         """Fill the combo with all raster layers in the project."""
         self.rasterCombo.clear()
         for lyr in QgsProject.instance().mapLayers().values():
-            if lyr.type() == QgsMapLayer.RasterLayer:
+            if lyr.type() == QgsMapLayer.LayerType.RasterLayer:
                 # Store the layer ID in userData so we can retrieve the exact layer later
                 self.rasterCombo.addItem(lyr.name(), lyr.id())
 

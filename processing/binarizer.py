@@ -1,6 +1,6 @@
 # binarizer.py
 # -*- coding: utf-8 -*-
-import os
+import logging
 from pathlib import Path
 import cv2
 import numpy as np
@@ -47,8 +47,8 @@ def run_binarization_pipeline(stage3_folder, progress_cb=None):
     def _progress(p):
         try:
             if progress_cb: progress_cb(int(max(0, min(100, p))))
-        except Exception:
-            pass
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     in_path = Path(stage3_folder)
     if not in_path.is_dir():

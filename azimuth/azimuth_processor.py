@@ -1,5 +1,6 @@
 # azimuth_processor.py
 # -*- coding: utf-8 -*-
+import logging
 import os, glob
 import cv2
 import numpy as np
@@ -15,8 +16,8 @@ def run_azimuth_pipeline(input_folder, progress_cb=None):
     def _progress(p):
         try:
             if progress_cb: progress_cb(int(max(0, min(100, p))))
-        except Exception:
-            pass
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     if not input_folder or not os.path.isdir(input_folder):
         iface.messageBar().pushWarning("ArchaeoAstroInsight ", "Azimuth: input folder is missing or invalid.")

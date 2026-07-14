@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 from qgis.utils import iface
 from qgis.core import (
     QgsProject, QgsMapLayer, QgsCoordinateTransform, QgsRectangle, QgsFeatureRequest
@@ -24,11 +25,11 @@ def export_crops(
         try:
             if progress_cb is not None:
                 progress_cb(int(max(0, min(100, p))))
-        except Exception:
-            pass
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     # --- Validate raster ---
-    if not raster_layer or raster_layer.type() != QgsMapLayer.RasterLayer:
+    if not raster_layer or raster_layer.type() != QgsMapLayer.LayerType.RasterLayer:
         iface.messageBar().pushWarning("ArchaeoAstroInsight ", "Please select a valid raster layer (image to crop).")
         return
 
@@ -214,8 +215,8 @@ def export_crops(
             if isinstance(resize_to, tuple) and len(resize_to) == 2:
                 try:
                     crop_bgr = cv2.resize(crop_bgr, resize_to, interpolation=cv2.INTER_AREA)
-                except Exception:
-                    pass
+                except Exception as _exc:
+                    logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
             conf_val = feat["confidence"] if "confidence" in fields else None
 

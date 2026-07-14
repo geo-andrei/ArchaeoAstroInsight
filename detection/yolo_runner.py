@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 #BACKUP
+import logging
 from qgis.utils import iface
 from qgis.core import (
     QgsMapLayer,
@@ -11,8 +12,6 @@ from qgis.core import (
     QgsGeometry,
     QgsField,
     QgsFields,
-    QgsWkbTypes,
-    QgsCoordinateReferenceSystem
 )
 from qgis.PyQt.QtCore import QVariant
 from qgis.PyQt.QtGui import QColor
@@ -21,7 +20,6 @@ from qgis.core import QgsLineSymbolLayer
 import numpy as np
 import cv2
 from ultralytics import YOLO
-import math
 import os
 
 # === Parameters ===
@@ -83,8 +81,8 @@ def run_yolo_on_layer(
         if progress_cb is not None:
             try:
                 progress_cb(int(p))
-            except Exception:
-                pass
+            except Exception as _exc:
+                logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     def _canceled():
         try:
@@ -95,7 +93,7 @@ def run_yolo_on_layer(
     _progress(1)  # started
 
     # --- Validate raster layer ---
-    if not layer or layer.type() != QgsMapLayer.RasterLayer:
+    if not layer or layer.type() != QgsMapLayer.LayerType.RasterLayer:
         iface.messageBar().pushWarning("ArchaeoAstroInsight ", "Please select a valid raster layer.")
         return None
 
@@ -346,8 +344,8 @@ def run_yolo_on_layer(
             outline.setWidth(0.8)
         symbol.setColor(QColor(0, 0, 0, 0))
         vector_layer.triggerRepaint()
-    except Exception:
-        pass
+    except Exception as _exc:
+        logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     _progress(100)
 

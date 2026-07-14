@@ -1,3 +1,4 @@
+import logging
 import os
 import math
 import time
@@ -44,8 +45,8 @@ def _download_horizon_csv(
     # Trigger panorama generation (best-effort)
     try:
         requests.get(PAN_CGI, params={"id": hwt_id}, timeout=timeout)
-    except Exception:
-        pass
+    except Exception as _exc:
+        logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     deadline = time.time() + max_wait_s
     last_snippet = None
@@ -120,14 +121,15 @@ def _download_horizon_csv(
                     for cell in row:
                         try:
                             nums.append(float(cell))
-                        except Exception:
-                            pass
+                        except Exception as _exc:
+                            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
                     if len(nums) < 2:
                         continue
                     az, alt = nums[0], nums[1]
 
                 data.append({"az": az, "alt": alt})
-            except Exception:
+            except Exception as _exc:
+                logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
                 continue
 
         if data:

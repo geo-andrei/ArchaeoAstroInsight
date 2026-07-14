@@ -26,6 +26,7 @@ Usage (from plugin):
 """
 
 from __future__ import annotations
+import logging
 import os
 from pathlib import Path
 from typing import Iterable, List, Tuple, Optional, Callable
@@ -48,8 +49,8 @@ except Exception:
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
 try:
     tf.config.set_visible_devices([], "GPU")
-except Exception:
-    pass
+except Exception as _exc:
+    logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 # avoid oversubscribing threads inside QGIS
 tf.config.threading.set_intra_op_parallelism_threads(0)
 tf.config.threading.set_inter_op_parallelism_threads(0)
@@ -143,8 +144,8 @@ def run_resnet_inference(
         try:
             if progress_cb:
                 progress_cb(max(0, min(100, int(p))))
-        except Exception:
-            pass
+        except Exception as _exc:
+            logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     # Collect files
     pairs = _list_pngs(folders)
@@ -212,8 +213,8 @@ def run_resnet_inference(
     try:
         if iface is not None:
             iface.messageBar().pushInfo("ArchaeoAstroInsight ", f"ResNet predictions saved: {out_csv}")
-    except Exception:
-        pass
+    except Exception as _exc:
+        logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
 
     _progress(100)
     return out_csv
