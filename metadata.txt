@@ -6,7 +6,7 @@
 name=ArchaeoAstroInsight
 qgisMinimumVersion=3.0
 description=Detects archaeological features in satellite and aerial imagery and computes their archaeoastronomical alignment by using AI algorithms.
-version=0.1
+version=0.2
 author=Andrei Ancuta, Helga Hochbauer, Maitane Urrutia, Marc Frincu
 email=andrei.ancuta@e-uvt.ro
 
