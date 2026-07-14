@@ -156,7 +156,7 @@ Everything is written under `<output folder>\Results\`:
 ## Authors
 
 Andrei Ancuta, Helga Hochbauer, Maitane Urrutia, Marc Frincu
-West University of Timișoara (UVT)
+
 
 Contact: andrei.ancuta@e-uvt.ro
 
