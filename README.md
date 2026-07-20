@@ -151,6 +151,12 @@ Everything is written under `<output folder>\Results\`:
 - `curvigram_declination_hwt.png` / `curvigram_declination_srtm.png`: declination curvigrams (for whichever horizon methods were selected).
 - `resnet_predictions.csv`: per-crop ResNet predictions.
 
+## Reproducing the experiments
+
+All the data a user needs to reproduce our experiments is published as a Kaggle notebook, which walks through the full analysis of the Al Hayit site (data and steps included):
+
+[Al Hayit analysis on Kaggle](https://www.kaggle.com/code/marcfrincu/al-hayit-analysis)
+
 ---
 
 ## Authors
