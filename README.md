@@ -162,7 +162,7 @@ All the data a user needs to reproduce our experiments is published as a Kaggle 
 ## Authors
 
 Andrei Ancuta, Helga Hochbauer, Maitane Urrutia, Marc Frincu
-West University of Timișoara (UVT)
+
 
 Contact: andrei.ancuta@e-uvt.ro
 
