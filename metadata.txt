@@ -6,11 +6,11 @@
 name=ArchaeoAstroInsight
 qgisMinimumVersion=3.0
 description=Detects archaeological features in satellite and aerial imagery and computes their archaeoastronomical alignment by using AI algorithms.
-version=0.2
+version=0.3
 author=Andrei Ancuta, Helga Hochbauer, Maitane Urrutia, Marc Frincu
 email=andrei.ancuta@e-uvt.ro
 
-about=ArchaeoAstroInsight is a QGIS plugin for the archaeoastronomical analysis of ground-level archaeological features. It detects features in satellite or aerial rasters using a YOLO model, estimates each feature's orientation (azimuth) with a ResNet classifier, derives the local horizon from either the HeyWhatsThat online service or user-provided SRTM elevation data, and computes the astronomical declination of each alignment. It also generates azimuth and declination curvigrams (kernel-density plots with significance thresholds) and writes all results to a single CSV for further analysis. It requires external Python packages (PyTorch, TensorFlow, Ultralytics and others) that are not bundled with the plugin; see the installation instructions in the repository README. Data to reproduce the experiments is available as a Kaggle notebook: https://www.kaggle.com/code/marcfrincu/al-hayit-analysis
+about=ArchaeoAstroInsight is a QGIS plugin for the archaeoastronomical analysis of ground-level archaeological features. It detects features in satellite or aerial rasters using a YOLO model, estimates each feature's orientation (azimuth) with a ResNet classifier (or reads it directly from user-drawn lines), derives the local horizon from the HeyWhatsThat online service, user-provided SRTM elevation data and/or LiDAR point clouds, and computes the astronomical declination of each alignment. It also generates azimuth and declination curvigrams (kernel-density plots with significance thresholds) and writes all results to a single CSV for further analysis. It requires external Python packages (PyTorch, TensorFlow, Ultralytics and others) that are not bundled with the plugin; see the installation instructions in the repository README. Data to reproduce the experiments is available as a Kaggle notebook: https://www.kaggle.com/code/marcfrincu/al-hayit-analysis
 
 tracker=https://github.com/geo-andrei/ArchaeoAstroInsight/issues
 repository=https://github.com/geo-andrei/ArchaeoAstroInsight
@@ -19,8 +19,11 @@ repository=https://github.com/geo-andrei/ArchaeoAstroInsight
 # Recommended items:
 
 hasProcessingProvider=no
-# Uncomment the following line and add your changelog:
-# changelog=
+changelog=
+    0.3
+    - New: line layers as input; each line's drawn direction is the azimuth (no YOLO/ResNet model needed)
+    - New: LiDAR (.laz/.las) horizon, a third independent declination method alongside HeyWhatsThat and SRTM
+    - Faster start-up (lazy loading) and ResNet model caching
 
 # Tags are comma separated with spaces allowed
 tags=python, archaeoastronomy

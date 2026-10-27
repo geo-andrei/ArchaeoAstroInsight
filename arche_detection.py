@@ -39,28 +39,59 @@ from qgis.PyQt.QtWidgets import (
     QAction, QApplication, QFileDialog, QProgressDialog,
 )
 from qgis.core import QgsProject
-import importlib
 
 # ---------------------------------------------------------------------------
 # Heavy worker imports (numpy, OpenCV, Ultralytics, TensorFlow, pandas,
-# matplotlib, astrocult, ...) are deferred here behind a guard so the plugin
-# can still LOAD in QGIS even when these external packages are not installed
-# yet. If any are missing, _WORKER_IMPORT_ERROR is set and the plugin shows a
-# friendly "please install dependencies" message instead of crashing on load.
+# matplotlib, astrocult, ...) are loaded LAZILY by _load_workers() the first
+# time the plugin is actually run -- not at plugin load. This keeps QGIS
+# startup fast and avoids importing ~2 GB of ML libraries for users who never
+# open the plugin. If any package is missing, _WORKER_IMPORT_ERROR is set and
+# the plugin shows a friendly "please install dependencies" message.
 # ---------------------------------------------------------------------------
 _WORKER_IMPORT_ERROR = None
-try:
-    from .detection.yolo_runner import run_yolo_on_layer
-    from .detection.crop_exporter import export_crops
-    from .azimuth.azimuth_processor import run_azimuth_pipeline
-    from .processing.binarizer import run_binarization_pipeline
-    from .classification.resnet_runner import run_resnet_inference
-    from .analysis.curvigram_runner import run_curvigram_from_resnet_csv_single, run_declination_curvigrams
-    from .astronomy import declination_runner
-    importlib.reload(declination_runner)
-    run_declination_pipeline = declination_runner.run_declination_pipeline
-except Exception as _e:  # ImportError, or anything a heavy module raises on import
-    _WORKER_IMPORT_ERROR = _e
+_workers_loaded = False
+
+run_yolo_on_layer = None
+export_crops = None
+run_azimuth_pipeline = None
+run_binarization_pipeline = None
+run_resnet_inference = None
+run_curvigram_from_resnet_csv_single = None
+run_declination_curvigrams = None
+run_declination_pipeline = None
+
+
+def _load_workers():
+    """Import the heavy worker modules once, on first use (lazy)."""
+    global _workers_loaded, _WORKER_IMPORT_ERROR
+    global run_yolo_on_layer, export_crops, run_azimuth_pipeline
+    global run_binarization_pipeline, run_resnet_inference
+    global run_curvigram_from_resnet_csv_single, run_declination_curvigrams
+    global run_declination_pipeline
+    if _workers_loaded:
+        return
+    _workers_loaded = True
+    try:
+        from .detection.yolo_runner import run_yolo_on_layer as _yolo
+        from .detection.crop_exporter import export_crops as _crops
+        from .azimuth.azimuth_processor import run_azimuth_pipeline as _az
+        from .processing.binarizer import run_binarization_pipeline as _binz
+        from .classification.resnet_runner import run_resnet_inference as _resnet
+        from .analysis.curvigram_runner import (
+            run_curvigram_from_resnet_csv_single as _curv,
+            run_declination_curvigrams as _declcurv,
+        )
+        from .astronomy.declination_runner import run_declination_pipeline as _decl
+        run_yolo_on_layer = _yolo
+        export_crops = _crops
+        run_azimuth_pipeline = _az
+        run_binarization_pipeline = _binz
+        run_resnet_inference = _resnet
+        run_curvigram_from_resnet_csv_single = _curv
+        run_declination_curvigrams = _declcurv
+        run_declination_pipeline = _decl
+    except Exception as _e:  # ImportError, or anything a heavy module raises on import
+        _WORKER_IMPORT_ERROR = _e
 
 
 # Import name -> pip distribution name, for a friendly "what is missing" check.
@@ -273,6 +304,16 @@ class ArcheDetection:
 
     def unload(self):
         """Removes the plugin menu item and icon from QGIS GUI."""
+        # Tear down the dialog so its QgsProject signal connections are released
+        # (Qt auto-disconnects bound-method connections when the dialog QObject
+        # is destroyed), preventing a connection leak across plugin reloads.
+        dlg = getattr(self, "dlg", None)
+        if dlg is not None:
+            try:
+                dlg.deleteLater()
+            except Exception as _exc:
+                logging.getLogger(__name__).debug("suppressed non-fatal error: %s", _exc)
+            self.dlg = None
         for action in self.actions:
             self.iface.removePluginMenu(
                 self.tr(u'&ArchaeoAstroInsight'),
@@ -283,6 +324,7 @@ class ArcheDetection:
     def _ensure_dependencies(self):
         """Return True if the heavy runtime dependencies imported OK; otherwise
         show a friendly message (instead of crashing) and return False."""
+        _load_workers()  # lazy: import the heavy ML stack on first use
         if _WORKER_IMPORT_ERROR is None:
             return True
         from qgis.PyQt.QtWidgets import QMessageBox
@@ -459,7 +501,8 @@ class ArcheDetection:
         import pandas as pd
 
         # Client-facing model names
-        MODEL_NAME = {"feature": "Helga Model", "resnet": "Resnet Model"}
+        MODEL_NAME = {"feature": "Helga Model", "resnet": "Resnet Model",
+                      "line": "Line Model"}
 
         # filename -> {column_name: value}
         table = {}
@@ -523,14 +566,23 @@ class ArcheDetection:
         canonical = [
             "Azimuth Helga Model (deg)",
             "Azimuth Resnet Model (deg)",
+            "Azimuth Line Model (deg)",
             "Horizon Helga Model HWT (deg)",
             "Horizon Helga Model SRTM (deg)",
             "Horizon Resnet Model HWT (deg)",
             "Horizon Resnet Model SRTM (deg)",
+            "Horizon Line Model HWT (deg)",
+            "Horizon Line Model SRTM (deg)",
+            "Horizon Resnet Model LIDAR (deg)",
+            "Horizon Line Model LIDAR (deg)",
             "Declination Helga Model HWT (deg)",
             "Declination Helga Model SRTM (deg)",
             "Declination Resnet Model HWT (deg)",
             "Declination Resnet Model SRTM (deg)",
+            "Declination Line Model HWT (deg)",
+            "Declination Line Model SRTM (deg)",
+            "Declination Resnet Model LIDAR (deg)",
+            "Declination Line Model LIDAR (deg)",
         ]
         present = set()
         for cell in table.values():
@@ -566,6 +618,132 @@ class ArcheDetection:
 
 
 
+
+    def _line_azimuth_csv(self, line_layer, out_dir):
+        """Write <out_dir>/line_azimuths.csv with (filename, azimuth_deg) taken
+        from each drawn line's geodesic bearing (first -> last vertex). Filenames
+        follow export_crops' 'crop_f{fid}.png' convention so results.csv lines up.
+        """
+        import os
+        import csv
+        import math
+        from qgis.core import QgsDistanceArea, QgsProject, QgsPointXY
+        da = QgsDistanceArea()
+        da.setSourceCrs(line_layer.crs(), QgsProject.instance().transformContext())
+        da.setEllipsoid("WGS84")  # geodesic (ellipsoidal) bearing
+        rows = []
+        for f in line_layer.getFeatures():
+            g = f.geometry()
+            if g is None or g.isEmpty():
+                continue
+            # vertices() works for single, multi-part and curved line geometries
+            # (asPolyline() raises on MultiLineString).
+            verts = [QgsPointXY(v) for v in g.vertices()]
+            if len(verts) < 2:
+                continue
+            az = math.degrees(da.bearing(verts[0], verts[-1])) % 360.0
+            rows.append({"filename": "crop_f%06d.png" % f.id(),
+                         "azimuth_deg": round(az, 4)})
+        if not rows:
+            raise RuntimeError("No usable lines (each needs at least 2 vertices).")
+        os.makedirs(out_dir, exist_ok=True)
+        path = os.path.join(out_dir, "line_azimuths.csv")
+        with open(path, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=["filename", "azimuth_deg"])
+            w.writeheader()
+            w.writerows(rows)
+        return path
+
+    def _declination_and_outputs(self, detections_layer, out_dir, az_source,
+                                 az_csv_path, prog=None):
+        """Shared pipeline tail: per-horizon-method declination -> results.csv ->
+        optional curvigrams. `az_source` is 'resnet' or 'line'; `az_csv_path` is
+        the (filename, azimuth_deg) CSV that feeds both."""
+        import os
+        use_hwt = self.dlg.use_declination_hwt()
+        use_srtm = self.dlg.use_declination_srtm()
+        use_lidar = self.dlg.use_declination_lidar()
+        features_results_dir = os.path.join(out_dir, "features_results")
+
+        declination_outputs = []
+        if use_hwt or use_srtm or use_lidar:
+            if prog:
+                prog.setLabelText("Computing astronomical declinations…")
+            methods = []
+            if use_hwt:
+                methods.append(("HWT", False))
+            if use_srtm:
+                methods.append(("SRTM", True))
+            if use_lidar:
+                methods.append(("LIDAR", False))
+            for label, use_srtm_flag in methods:
+                try:
+                    out = run_declination_pipeline(
+                        features_results_dir,
+                        detections_layer,
+                        use_srtm=use_srtm_flag,
+                        srtm_path=self.dlg.srtm_path(),
+                        plugin_dir=self.plugin_dir,
+                        azimuth_source=az_source,
+                        resnet_csv=az_csv_path if az_source == "resnet" else None,
+                        line_csv=az_csv_path if az_source == "line" else None,
+                        use_lidar=(label == "LIDAR"),
+                        lidar_path=self.dlg.lidar_path(),
+                    )
+                    declination_outputs.append((f"{az_source}_{label}", out))
+                except Exception as _e:
+                    self.iface.messageBar().pushWarning(
+                        "ArchaeoAstroInsight ",
+                        f"Declination {az_source}/{label} skipped: {_e}")
+
+        if declination_outputs:
+            try:
+                self._build_results_csv(
+                    declination_outputs, out_dir,
+                    resnet_csv_path=az_csv_path if az_source == "resnet" else None)
+            except Exception as e:
+                self.iface.messageBar().pushWarning(
+                    "ArchaeoAstroInsight ", f"Results CSV skipped: {e}")
+            self.iface.messageBar().pushInfo(
+                "ArchaeoAstroInsight ", "Declination analysis completed.")
+
+        if bool(getattr(self.dlg, "curvigramCheck", None) and self.dlg.curvigramCheck.isChecked()):
+            did_any = False
+            try:
+                if az_csv_path and os.path.isfile(az_csv_path):
+                    if prog:
+                        prog.setLabelText("Computing azimuth curvigram…")
+                    res_az = run_curvigram_from_resnet_csv_single(
+                        csv_path=az_csv_path, latitude=45.0, h_eff_deg=3.0,
+                        iterations=20, save_dir=os.path.join(out_dir, "Results"))
+                    self.iface.messageBar().pushInfo(
+                        "ArchaeoAstroInsight ",
+                        f"Azimuth curvigram saved: {res_az['figure_path']}")
+                    did_any = True
+            except Exception as e:
+                self.iface.messageBar().pushWarning(
+                    "ArchaeoAstroInsight ", f"Azimuth curvigram skipped: {e}")
+            try:
+                _results_csv = os.path.join(out_dir, "Results", "results.csv")
+                if os.path.isfile(_results_csv) and (use_hwt or use_srtm or use_lidar):
+                    if prog:
+                        prog.setLabelText("Computing declination curvigrams…")
+                    res_decl = run_declination_curvigrams(
+                        _results_csv, save_dir=os.path.join(out_dir, "Results"),
+                        h_eff_deg=3.0, iterations=20,
+                        do_hwt=use_hwt, do_srtm=use_srtm, do_lidar=use_lidar,
+                        model="Line Model" if az_source == "line" else "Resnet Model")
+                    if res_decl:
+                        self.iface.messageBar().pushInfo(
+                            "ArchaeoAstroInsight ",
+                            f"Declination curvigrams saved: {list(res_decl.keys())}")
+                        did_any = True
+            except Exception as e:
+                self.iface.messageBar().pushWarning(
+                    "ArchaeoAstroInsight ", f"Declination curvigrams skipped: {e}")
+            if not did_any:
+                self.iface.messageBar().pushWarning(
+                    "ArchaeoAstroInsight ", "Curvigrams skipped: no suitable CSV found.")
 
     def run(self):
         if not self._ensure_dependencies():
@@ -690,6 +868,15 @@ class ArcheDetection:
                 _set_progress(80)  # we'll reuse the same 80-100% export window below
 
 
+            # Line mode = feature mode + the chosen layer is a LINE layer.
+            # A drawn line encodes orientation directly (its bearing = azimuth),
+            # so line mode skips YOLO AND ResNet; crops are still saved (square).
+            from qgis.core import QgsWkbTypes
+            line_mode = bool(
+                polygon_mode and detections_layer is not None and
+                QgsWkbTypes.geometryType(detections_layer.wkbType())
+                == QgsWkbTypes.GeometryType.LineGeometry)
+
             # ---- Optional export (80..100%) ----
             if getattr(self.dlg, "exportCropsCheck", None) and self.dlg.exportCropsCheck.isChecked():
                 out_dir = self.dlg.exportDirEdit.text().strip() if getattr(self.dlg, "exportDirEdit", None) else ""
@@ -712,7 +899,7 @@ class ArcheDetection:
                     vector_layer_name=detections_layer.name(),
                     output_dir=out_dir,
                     padding_px=6,
-                    make_square=False,
+                    make_square=line_mode,   # square (sized to line length) for line features
                     resize_to=None,
                     progress_cb=_export_cb,
                     vector_layer_obj=detections_layer  # use the exact layer we just created
@@ -722,7 +909,24 @@ class ArcheDetection:
                 _set_progress(100)
                 
             # ... inside the try: block, right after export_crops(...) call succeeded
-            if getattr(self.dlg, "resnetCheck", None) and self.dlg.resnetCheck.isChecked():
+            # ---- Line mode: azimuth straight from the drawn line's bearing (no ResNet) ----
+            if line_mode:
+                if ('out_dir' not in locals()) or (not out_dir):
+                    self.iface.messageBar().pushWarning(
+                        "ArchaeoAstroInsight ",
+                        "Line mode needs crop export on (for the output folder) — "
+                        "tick 'Export object detection crops'.")
+                else:
+                    prog.setLabelText("Computing line azimuths…")
+                    try:
+                        line_csv_path = self._line_azimuth_csv(detections_layer, out_dir)
+                        self._declination_and_outputs(
+                            detections_layer, out_dir, "line", line_csv_path, prog)
+                    except Exception as _le:
+                        self.iface.messageBar().pushCritical(
+                            "ArchaeoAstroInsight ", f"Line-mode analysis failed: {_le}")
+                _set_progress(100)
+            elif getattr(self.dlg, "resnetCheck", None) and self.dlg.resnetCheck.isChecked():
                 prog.setLabelText("Preprocessing crops for ResNet…")
                 # map azimuth progress 0..100 → 90..100
                 def _az_cb(pct: int):
@@ -808,8 +1012,9 @@ class ArcheDetection:
                 use_hwt     = self.dlg.use_declination_hwt()
                 use_srtm    = self.dlg.use_declination_srtm()
                 use_resnet  = self.dlg.use_resnet_azimuth()
+                use_lidar   = self.dlg.use_declination_lidar()
 
-                if use_hwt or use_srtm:
+                if use_hwt or use_srtm or use_lidar:
 
                     prog.setLabelText("Computing astronomical declinations…")
 
@@ -828,6 +1033,8 @@ class ArcheDetection:
                         methods.append(("HWT", False))
                     if use_srtm:
                         methods.append(("SRTM", True))
+                    if use_lidar:
+                        methods.append(("LIDAR", False))
 
                     # --- Run each combination INDEPENDENTLY so a failure in one
                     #     (e.g. the HeyWhatsThat/HWT web service being unreachable)
@@ -842,7 +1049,9 @@ class ArcheDetection:
                                     srtm_path=self.dlg.srtm_path(),
                                     plugin_dir=self.plugin_dir,
                                     azimuth_source=az_src,
-                                    resnet_csv=resnet_csv_path if az_src == "resnet" else None
+                                    resnet_csv=resnet_csv_path if az_src == "resnet" else None,
+                                    use_lidar=(label == "LIDAR"),
+                                    lidar_path=self.dlg.lidar_path(),
                                 )
                                 declination_outputs.append((f"{az_src}_{label}", out))
                             except Exception as _e:
@@ -917,7 +1126,8 @@ class ArcheDetection:
                         _results_csv = os.path.join(out_dir, "Results", "results.csv")
                         _do_hwt  = bool(self.dlg.use_declination_hwt())
                         _do_srtm = bool(self.dlg.use_declination_srtm())
-                        if os.path.isfile(_results_csv) and (_do_hwt or _do_srtm):
+                        _do_lidar = bool(self.dlg.use_declination_lidar())
+                        if os.path.isfile(_results_csv) and (_do_hwt or _do_srtm or _do_lidar):
                             prog.setLabelText("Computing declination curvigrams…")
 
                             def _curvi_decl_cb(pct: int):
@@ -931,6 +1141,7 @@ class ArcheDetection:
                                 iterations=20,
                                 do_hwt=_do_hwt,
                                 do_srtm=_do_srtm,
+                                do_lidar=_do_lidar,
                                 progress_cb=_curvi_decl_cb,
                             )
                             if res_decl:

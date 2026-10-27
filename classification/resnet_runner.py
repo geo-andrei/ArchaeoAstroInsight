@@ -56,6 +56,21 @@ tf.config.threading.set_intra_op_parallelism_threads(0)
 tf.config.threading.set_inter_op_parallelism_threads(0)
 
 
+# Cache loaded Keras models across runs (keyed by path + mtime) so repeated
+# runs in one session don't re-read and rebuild the model from disk.
+_MODEL_CACHE = {}
+
+
+def _get_resnet_model(model_path):
+    """Load (or reuse a cached) Keras model, keyed by file path + mtime."""
+    key = (str(Path(model_path).resolve()), os.path.getmtime(model_path))
+    model = _MODEL_CACHE.get(key)
+    if model is None:
+        model = keras.models.load_model(str(model_path), compile=False)
+        _MODEL_CACHE[key] = model
+    return model
+
+
 def _list_pngs(folder_list: Iterable[str | Path]) -> List[Tuple[Path, str]]:
     """Return [(folder_path, filename), ...] for all PNGs in the given folders."""
     if isinstance(folder_list, (str, Path)):
@@ -156,7 +171,7 @@ def run_resnet_inference(
     model_path = Path(keras_model_path)
     if not model_path.is_file():
         raise FileNotFoundError(f".keras model not found: {model_path}")
-    model = keras.models.load_model(str(model_path), compile=False)
+    model = _get_resnet_model(model_path)
     layout = _infer_layout(model)
 
     # Prepare output

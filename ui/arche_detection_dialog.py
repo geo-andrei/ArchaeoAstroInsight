@@ -56,7 +56,7 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
 
         if create_polygon_widgets:
             # Create at runtime (ONLY if not in the .ui)
-            self.usePolyCheck = QtWidgets.QCheckBox("Use existing polygons (SHP)", self)
+            self.usePolyCheck = QtWidgets.QCheckBox("Use existing features (SHP: polygons or lines)", self)
             self.polygonLayerLabel = QtWidgets.QLabel("Polygons layer:", self)
             self.polygonLayerCombo = QtWidgets.QComboBox(self)
 
@@ -155,15 +155,11 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
         # ----------------------------------------------------------
         # Populate polygons combo
         # ----------------------------------------------------------
-        def _populate_polygon_layers():
-            self.polygonLayerCombo.clear()
-            for lyr in QgsProject.instance().mapLayers().values():
-                if isinstance(lyr, QgsVectorLayer) and QgsWkbTypes.geometryType(lyr.wkbType()) == QgsWkbTypes.GeometryType.PolygonGeometry:
-                    self.polygonLayerCombo.addItem(lyr.name(), lyr.id())
-
-        _populate_polygon_layers()
-        QgsProject.instance().layersAdded.connect(lambda *_: _populate_polygon_layers())
-        QgsProject.instance().layersRemoved.connect(lambda *_: _populate_polygon_layers())
+        # Bound-method connections (not lambdas) so Qt auto-disconnects them
+        # when the dialog is destroyed, avoiding a QgsProject signal leak.
+        self._populate_polygon_layers()
+        QgsProject.instance().layersAdded.connect(self._populate_polygon_layers)
+        QgsProject.instance().layersRemoved.connect(self._populate_polygon_layers)
 
         # Hide/show YOLO controls when polygon mode is toggled
         self._yolo_widgets = [
@@ -307,6 +303,26 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
         if hasattr(self, "srtmBrowseBtn"):
             self.srtmBrowseBtn.clicked.connect(_pick_srtm)
 
+        # LiDAR folder widgets follow the LiDAR checkbox (same pattern as SRTM)
+        def _toggle_declination_lidar(on: bool):
+            for wname in ("lidarPathEdit", "lidarBrowseBtn"):
+                w = getattr(self, wname, None)
+                if w:
+                    w.setEnabled(on)
+
+        if hasattr(self, "declinationLidarCheck"):
+            self.declinationLidarCheck.toggled.connect(_toggle_declination_lidar)
+            _toggle_declination_lidar(self.declinationLidarCheck.isChecked())
+
+        def _pick_lidar():
+            path = QFileDialog.getExistingDirectory(
+                self, "Choose folder containing LiDAR (.laz/.las) files")
+            if path and hasattr(self, "lidarPathEdit"):
+                self.lidarPathEdit.setText(path)
+
+        if hasattr(self, "lidarBrowseBtn"):
+            self.lidarBrowseBtn.clicked.connect(_pick_lidar)
+
         def srtm_path(self):
             if hasattr(self, "srtmPathEdit"):
                 return self.srtmPathEdit.text().strip()
@@ -347,9 +363,10 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
             if hasattr(self, "useResnetCheck"):
                 self.useResnetCheck.setEnabled(enable)
 
-            # Curvigrams become available once the ResNet pipeline will run
+            # Curvigrams become available once the ResNet pipeline will run,
+            # or whenever a line layer is selected (line mode).
             if hasattr(self, "curvigramCheck"):
-                self.curvigramCheck.setEnabled(enable)
+                self.curvigramCheck.setEnabled(enable or self._line_selected())
 
         if hasattr(self, "resnetCheck"):
             self.resnetCheck.toggled.connect(_toggle_resnet)
@@ -396,13 +413,16 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
             resnet_on   = bool(getattr(self, "resnetCheck", None) and self.resnetCheck.isChecked())
             use_resnet  = resnet_on and export_on
 
-            enable = use_feature or use_resnet
+            enable = use_feature or use_resnet or self._line_selected()
 
             if hasattr(self, "declinationHWTCheck"):
                 self.declinationHWTCheck.setEnabled(enable)
 
             if hasattr(self, "declinationSRTMCheck"):
                 self.declinationSRTMCheck.setEnabled(enable)
+
+            if hasattr(self, "declinationLidarCheck"):
+                self.declinationLidarCheck.setEnabled(enable)
 
         if hasattr(self, "useYoloMonteCheck"):
             self.useYoloMonteCheck.toggled.connect(lambda _: _update_declination_controls())
@@ -419,6 +439,26 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
 
         _update_declination_controls()
 
+        # Line mode: grey out ResNet (not needed) but keep declination/curvigrams
+        # available. Connected last so it overrides _toggle_export's ResNet enable.
+        def _apply_feature_mode(*_):
+            line_sel = self._line_selected()
+            if hasattr(self, "resnetCheck"):
+                export_on = bool(getattr(self, "exportCropsCheck", None)
+                                 and self.exportCropsCheck.isChecked())
+                self.resnetCheck.setEnabled(export_on and not line_sel)
+            resnet_on = (not line_sel) and hasattr(self, "resnetCheck") and self.resnetCheck.isChecked()
+            _toggle_resnet(resnet_on)
+            _update_declination_controls()
+
+        for _name in ("usePolyCheck", "exportCropsCheck"):
+            _w = getattr(self, _name, None)
+            if _w:
+                _w.toggled.connect(_apply_feature_mode)
+        if hasattr(self, "polygonLayerCombo"):
+            self.polygonLayerCombo.currentIndexChanged.connect(_apply_feature_mode)
+        _apply_feature_mode()
+
     def populate_raster_combo(self):
         """Fill the combo with all raster layers in the project."""
         self.rasterCombo.clear()
@@ -427,11 +467,45 @@ class ArcheDetectionDialog(QtWidgets.QDialog, FORM_CLASS):
                 # Store the layer ID in userData so we can retrieve the exact layer later
                 self.rasterCombo.addItem(lyr.name(), lyr.id())
 
+    def _populate_polygon_layers(self, *args):
+        """Fill the feature combo with polygon AND line layers (polygons are
+        cropped + classified by ResNet; lines give their azimuth directly)."""
+        self.polygonLayerCombo.clear()
+        _feature_geoms = (QgsWkbTypes.GeometryType.PolygonGeometry,
+                          QgsWkbTypes.GeometryType.LineGeometry)
+        for lyr in QgsProject.instance().mapLayers().values():
+            if isinstance(lyr, QgsVectorLayer) and QgsWkbTypes.geometryType(lyr.wkbType()) in _feature_geoms:
+                self.polygonLayerCombo.addItem(lyr.name(), lyr.id())
+
+    def _line_selected(self):
+        """True when feature mode is on and the chosen feature layer is a LINE
+        layer (line mode: azimuth from geometry, ResNet not needed)."""
+        if not (getattr(self, "usePolyCheck", None) and self.usePolyCheck.isChecked()):
+            return False
+        lid = self.polygonLayerCombo.currentData() if hasattr(self, "polygonLayerCombo") else None
+        lyr = QgsProject.instance().mapLayer(lid) if lid else None
+        if lyr is None:
+            return False
+        try:
+            return (QgsWkbTypes.geometryType(lyr.wkbType())
+                    == QgsWkbTypes.GeometryType.LineGeometry)
+        except Exception:
+            return False
+
     def use_declination_hwt(self):
         return hasattr(self, "declinationHWTCheck") and self.declinationHWTCheck.isChecked()
 
     def use_declination_srtm(self):
         return hasattr(self, "declinationSRTMCheck") and self.declinationSRTMCheck.isChecked()
+
+    def use_declination_lidar(self):
+        return hasattr(self, "declinationLidarCheck") and self.declinationLidarCheck.isChecked()
+
+    def lidar_path(self):
+        """Return the selected LiDAR folder."""
+        if hasattr(self, "lidarPathEdit"):
+            return self.lidarPathEdit.text().strip()
+        return ""
 
     def use_feature_azimuth(self):
         return hasattr(self, "useYoloMonteCheck") and self.useYoloMonteCheck.isChecked()

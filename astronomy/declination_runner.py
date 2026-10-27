@@ -10,6 +10,7 @@ import pandas as pd
 
 from qgis.core import QgsCoordinateReferenceSystem, QgsCoordinateTransform, QgsProject
 from .srtm_horizon.srtm_pipeline import compute_srtm_horizon, srtm_hor2alt
+from .lidar_horizon import compute_lidar_horizon
 
 QUERY_CGI   = "http://www.heywhatsthat.com/bin/query.cgi"
 PAN_CGI     = "http://www.heywhatsthat.com/iphone/pan.cgi"
@@ -205,21 +206,27 @@ _HORIZON_CACHE = {}
 
 
 def _get_horizon_cached(use_srtm, lat, lon, *, srtm_path=None, plugin_dir=None,
-                        resolution: str = ".125", max_wait_s: int = 180):
+                        resolution: str = ".125", max_wait_s: int = 180,
+                        use_lidar=False, lidar_path=None):
     """Return the horizon profile for (method, lat, lon), computing it only once."""
-    key = (
-        "SRTM" if use_srtm else "HWT",
-        round(float(lat), 6),
-        round(float(lon), 6),
-        srtm_path if use_srtm else resolution,
-    )
+    if use_lidar:
+        key = ("LIDAR", round(float(lat), 6), round(float(lon), 6), lidar_path)
+    else:
+        key = (
+            "SRTM" if use_srtm else "HWT",
+            round(float(lat), 6),
+            round(float(lon), 6),
+            srtm_path if use_srtm else resolution,
+        )
     cached = _HORIZON_CACHE.get(key)
     if cached is not None:
         print("[Declination] Reusing cached {} horizon for ({:.5f}, {:.5f})".format(
             key[0], lat, lon))
         return cached
 
-    if use_srtm:
+    if use_lidar:
+        value = compute_lidar_horizon(lat, lon, lidar_path)
+    elif use_srtm:
         value = compute_srtm_horizon(
             latitude=lat, longitude=lon, srtm_folder=srtm_path, plugin_dir=plugin_dir
         )
@@ -241,7 +248,10 @@ def run_declination_pipeline(
     resolution: str = ".125",
     max_wait_s: int = 180,
     azimuth_source: str = "feature",
-    resnet_csv: str = None   
+    resnet_csv: str = None,
+    line_csv: str = None,
+    use_lidar=False,
+    lidar_path=None,
 ) -> str:
     """
     Reads azimuth_runs_*.csv in features_results_dir, uses SUMMARY_mean rows,
@@ -271,6 +281,15 @@ def run_declination_pipeline(
         df_mean = pd.read_csv(resnet_csv).copy()
         if "filename" not in df_mean.columns or "azimuth_deg" not in df_mean.columns:
             raise ValueError("ResNet CSV must contain 'filename' and 'azimuth_deg'")
+        df_mean["det_id"] = range(len(df_mean))
+
+    elif azimuth_source == "line":
+        # Azimuths taken straight from the drawn line geometry (its bearing).
+        if not line_csv or not os.path.isfile(line_csv):
+            raise FileNotFoundError("Line azimuth CSV is missing or invalid")
+        df_mean = pd.read_csv(line_csv).copy()
+        if "filename" not in df_mean.columns or "azimuth_deg" not in df_mean.columns:
+            raise ValueError("Line CSV must contain 'filename' and 'azimuth_deg'")
         df_mean["det_id"] = range(len(df_mean))
 
     else:
@@ -303,7 +322,11 @@ def run_declination_pipeline(
     # Fetch horizon profile (SRTM or HeyWhatsThat)
     # ---------------------------------------------------------
 
-    if use_srtm:
+    if use_lidar:
+        hor = _get_horizon_cached(
+            False, lat, lon, use_lidar=True, lidar_path=lidar_path
+        )
+    elif use_srtm:
         hor = _get_horizon_cached(
             True, lat, lon, srtm_path=srtm_path, plugin_dir=plugin_dir
         )
@@ -321,7 +344,8 @@ def run_declination_pipeline(
         if i < 5:
             print(f"[DEBUG] Row {i} → azimuth_deg = {az}")
 
-        if use_srtm:
+        if use_lidar or use_srtm:
+            # same {'data': [{az, alt}]} profile shape for both
             altitude = srtm_hor2alt(hor, az)
         else:
             altitude = _alt_from_profile(horizon_profile, az)
@@ -336,10 +360,10 @@ def run_declination_pipeline(
             "observer_lon": lon,
             "horizon_altitude_deg": altitude,
             "declination_deg": decl,
-            "horizon_model": "SRTM" if use_srtm else "HWT"
+            "horizon_model": "LIDAR" if use_lidar else ("SRTM" if use_srtm else "HWT")
         })
 
-    suffix = "_SRTM" if use_srtm else "_HWT"
+    suffix = "_LIDAR" if use_lidar else ("_SRTM" if use_srtm else "_HWT")
 
     os.makedirs(features_results_dir, exist_ok=True)
     out_csv = os.path.join(

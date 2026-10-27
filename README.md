@@ -2,15 +2,23 @@
 
 **A QGIS plugin for the archaeoastronomical analysis of ground-level archaeological features.**
 
-ArchaeoAstroInsight detects features in satellite or aerial rasters using a YOLO model, estimates each feature's orientation (azimuth) with a ResNet classifier, derives the local horizon from either the HeyWhatsThat online service or user-provided SRTM elevation data, and computes the astronomical declination of each alignment. It also generates azimuth and declination curvigrams (kernel-density plots with significance thresholds) and writes all results to a single CSV for further analysis.
+ArchaeoAstroInsight detects features in satellite or aerial rasters using a YOLO model, estimates each feature's orientation (azimuth) with a ResNet classifier (or reads it directly from lines you draw), derives the local horizon from the HeyWhatsThat online service, user-provided SRTM elevation data and/or LiDAR point clouds, and computes the astronomical declination of each alignment. It also generates azimuth and declination curvigrams (kernel-density plots with significance thresholds) and writes all results to a single CSV for further analysis.
+
+## What's new in 0.3
+
+- **Line layers as input:** draw a line along each feature; its drawn direction (first → last vertex) is used as the azimuth, so no YOLO or ResNet model is needed. See [Quick start (line layer)](#quick-start-line-layer-no-models).
+- **LiDAR horizon:** a third, independent horizon method from `.laz`/`.las` point clouds, alongside HeyWhatsThat and SRTM. See section 5 of [the dialog](#the-dialog-section-by-section).
+- Faster start-up (heavy libraries load only when the plugin runs) and the ResNet model is cached between runs.
+
+Nothing was removed: existing workflows (YOLO + ResNet, polygon layers, HWT, SRTM) work as before.
 
 ---
 
 ## Features
 
-- **Feature detection:** YOLO object detection on satellite/aerial rasters (or on existing polygon layers).
-- **Azimuth estimation:** a ResNet classifier estimates the orientation of each detected feature.
-- **Horizon computation:** local horizon altitude from the [HeyWhatsThat](https://www.heywhatsthat.com/) online service and/or **user-provided SRTM** elevation tiles.
+- **Feature detection:** YOLO object detection on satellite/aerial rasters (or on existing polygon or line layers).
+- **Azimuth estimation:** a ResNet classifier estimates the orientation of each detected feature, or, for a line layer, the azimuth is taken directly from each line's drawn direction.
+- **Horizon computation:** local horizon altitude from the [HeyWhatsThat](https://www.heywhatsthat.com/) online service, **user-provided SRTM** elevation tiles and/or **LiDAR point clouds** (`.laz`/`.las`), each computed independently.
 - **Astronomical declination computation:** computes the declination for each feature/horizon combination.
 - **Curvigrams:** azimuth and declination kernel-density plots with significance thresholds.
 - **Consolidated output:** everything lands in a single `Results/results.csv`, plus curvigram PNGs.
@@ -36,8 +44,9 @@ They are installed into QGIS's Python by the included scripts, using pinned vers
 
 Apart from a supported QGIS and the two install scripts, **no other software is required**: there is no separate Python and no C/C++ compiler required. The bundled PyTorch and TensorFlow are CPU builds, so no GPU is needed; if you install a CUDA-enabled PyTorch, the YOLO detection step will automatically use your GPU (the ResNet/TensorFlow step always runs on the CPU). You do, however, supply your own **data**:
 
-- a **YOLO** detection model (`.pt`/`.pth`) and a **ResNet** azimuth model (`.keras`), chosen in the dialog;
+- a **YOLO** detection model (`.pt`/`.pth`) and a **ResNet** azimuth model (`.keras`), chosen in the dialog (not needed when you use a line layer);
 - **SRTM elevation tiles** (a folder of `.hgt` / `.tif` / … rasters), only if you use the SRTM horizon option. The HeyWhatsThat option needs no local data, just an internet connection.
+- **LiDAR point clouds** (a folder of `.laz` / `.las` files with a projected CRS and ground-classified points, class 2), only if you use the LiDAR horizon option. Files without a CRS are skipped.
 
 ---
 
@@ -102,9 +111,19 @@ Open the plugin from the **Plugins** menu (or its toolbar icon). The dialog is o
 2. **Object detection** → browse to a **YOLO model** (`.pt`/`.pth`); leave Confidence and Tile overlap at their defaults to start.
 3. **Export & Post-processing** → tick **Export object detection crops** and choose an **Output folder**. *(This unlocks the sections below.)*
 4. **Azimuth estimation** → tick **Classify crops using ResNet** and browse to your **ResNet model** (`.keras`).
-5. **Astronomical declination computation** → tick **Hey What's That service** and/or **SRTM data** (for SRTM, also pick the tiles folder).
+5. **Astronomical declination computation** → tick **Hey What's That service**, **SRTM data** and/or **LiDAR data** (for SRTM/LiDAR, also pick the folder).
 6. Optionally tick **Generate … curvigram plots**.
 7. Click **OK**. Results land in `<output folder>\Results\` (see [Output](#output)).
+
+### Quick start (line layer, no models)
+
+1. Create a line layer (e.g. a shapefile) and draw one line along each feature, **from the start of the alignment towards the direction it points**: the bearing from the first to the last vertex is the azimuth (a line drawn N→S gives 180°, S→N gives 0°).
+2. **Input Layers** → pick a **Raster Layer** covering the lines (the square crops are cut from it; it must be a raster file, not an online basemap), tick **Use existing features (SHP: polygons or lines)** and choose your line layer. ResNet greys out because it is not needed.
+3. **Export & Post-processing** → tick **Export object detection crops** and choose an **Output folder**.
+4. **Astronomical declination computation** → tick **Hey What's That service**, **SRTM data** and/or **LiDAR data**.
+5. Optionally tick **Generate … curvigram plots**, then click **OK**.
+
+All features share one observer: the centre of the **first** feature in the layer (this also applies to polygon layers). For LiDAR, that point must lie inside the LiDAR coverage.
 
 ### The dialog, section by section
 
@@ -114,8 +133,8 @@ Open the plugin from the **Plugins** menu (or its toolbar icon). The dialog is o
 
 **1. Input Layers**
 - **Raster Layer:** the satellite/aerial image to analyse.
-- **Use existing polygons (SHP):** tick to *skip* YOLO detection and use features you already have. This **hides the Object detection group** and enables the polygon picker below (it's an either/or choice).
-- **Polygons layer:** the polygon layer to use (only when the box above is ticked).
+- **Use existing features (SHP: polygons or lines):** tick to *skip* YOLO detection and use features you already have. This **hides the Object detection group** and enables the layer picker below (it's an either/or choice).
+- **Features layer:** the polygon or line layer to use (only when the box above is ticked). Polygons are cropped and classified by ResNet as before; lines give their azimuth directly (see [Quick start (line layer)](#quick-start-line-layer-no-models)), and their crops are saved as squares sized to the line.
 
 **2. Object detection** *(hidden when you're in polygon mode)*
 - **YOLO model (.pt/.pth):** your detection model, chosen via **…**. Remembered between sessions.
@@ -127,16 +146,18 @@ Open the plugin from the **Plugins** menu (or its toolbar icon). The dialog is o
 - **Output folder:** where crops and the `Results/` folder are written (enabled once the box above is ticked).
 
 **4. Azimuth estimation**
-- **Classify crops using ResNet (.keras):** estimate each feature's orientation (azimuth) with a ResNet classifier. Available only when *Export crops* is on.
+- **Classify crops using ResNet (.keras):** estimate each feature's orientation (azimuth) with a ResNet classifier. Available only when *Export crops* is on; greyed out when a line layer is selected.
 - **ResNet model (.keras):** your classifier, chosen via **…**. Remembered between sessions.
 
-**5. Astronomical declination computation** *(available once the ResNet stage will run)*
+**5. Astronomical declination computation** *(available once the ResNet stage will run, or when a line layer is selected)*
 - **Hey What's That service:** derive the local horizon from the online [HeyWhatsThat](https://www.heywhatsthat.com/) service (needs internet, no local data).
 - **SRTM data:** derive the horizon from your own SRTM elevation tiles instead (works offline).
-- **SRTM folder:** the folder of SRTM tiles (enabled when *SRTM data* is ticked). You may tick **both** horizon methods to compute and compare each.
+- **SRTM folder:** the folder of SRTM tiles (enabled when *SRTM data* is ticked). You may tick **several** horizon methods to compute and compare each.
+- **LiDAR data:** derive the horizon from ground points (class 2) in your own `.laz`/`.las` files (works offline). The DEM resolution is chosen automatically from the point density. Only terrain *inside* the LiDAR files counts, so a warning reports how far the coverage reaches; distant relief outside it is ignored.
+- **LiDAR folder:** the folder of LiDAR files (enabled when *LiDAR data* is ticked). The observer must lie inside the coverage.
 
 **6. Generate azimuth and declination curvigram plots**
-- Produces the kernel-density curvigram PNGs (available once the ResNet stage will run). Which declination curvigrams appear depends on whether you ticked HWT and/or SRTM above.
+- Produces the kernel-density curvigram PNGs (available once the ResNet stage will run, or when a line layer is selected). Which declination curvigrams appear depends on which of HWT / SRTM / LiDAR you ticked above.
 
 **OK / Cancel:** **OK** runs the pipeline; **Cancel** closes the dialog without running.
 
@@ -146,10 +167,12 @@ Open the plugin from the **Plugins** menu (or its toolbar icon). The dialog is o
 
 Everything is written under `<output folder>\Results\`:
 
-- `results.csv`: filename, ResNet azimuth, horizon (HWT/SRTM), declination (HWT/SRTM), observer lat/lon.
-- `curvigram_resnet.png`: ResNet azimuth curvigram.
-- `curvigram_declination_hwt.png` / `curvigram_declination_srtm.png`: declination curvigrams (for whichever horizon methods were selected).
+- `results.csv`: filename, azimuth (ResNet, or Line for a line layer), horizon (HWT/SRTM/LIDAR), declination (HWT/SRTM/LIDAR), observer lat/lon.
+- `curvigram_resnet.png`: azimuth curvigram (from the ResNet azimuths, or from the line azimuths in line mode).
+- `curvigram_declination_hwt.png` / `curvigram_declination_srtm.png` / `curvigram_declination_lidar.png`: declination curvigrams (for whichever horizon methods were selected).
 - `resnet_predictions.csv`: per-crop ResNet predictions.
+
+In line mode, `<output folder>\line_azimuths.csv` also lists each line's crop filename and azimuth.
 
 ## Reproducing the experiments
 

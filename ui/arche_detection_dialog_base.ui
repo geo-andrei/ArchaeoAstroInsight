@@ -90,14 +90,14 @@
           <item row="1" column="0" colspan="2">
            <widget class="QCheckBox" name="usePolyCheck">
             <property name="text">
-             <string>Use existing polygons (SHP)</string>
+             <string>Use existing features (SHP: polygons or lines)</string>
             </property>
            </widget>
           </item>
           <item row="2" column="0">
            <widget class="QLabel" name="polygonLayerLabel">
             <property name="text">
-             <string>Polygons layer:</string>
+             <string>Features layer:</string>
             </property>
            </widget>
           </item>
@@ -370,6 +370,47 @@
             </item>
             <item>
              <widget class="QPushButton" name="srtmBrowseBtn">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="text">
+               <string>Browse</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QCheckBox" name="declinationLidarCheck">
+            <property name="enabled">
+             <bool>false</bool>
+            </property>
+            <property name="text">
+             <string>Compute astronomical declination using LiDAR data (.laz/.las)</string>
+            </property>
+            <property name="checked">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="lidarLayout">
+            <item>
+             <widget class="QLabel" name="lidarLabel">
+              <property name="text">
+               <string>LiDAR folder:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLineEdit" name="lidarPathEdit">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="lidarBrowseBtn">
               <property name="enabled">
                <bool>false</bool>
               </property>

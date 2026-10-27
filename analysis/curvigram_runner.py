@@ -303,13 +303,17 @@ def run_declination_curvigrams(
     do_hwt: bool = True,
     do_srtm: bool = True,
     progress_cb: Optional[callable] = None,
+    do_lidar: bool = False,
+    model: str = "Resnet Model",
 ) -> Dict[str, str]:
     """
     Build declination curvigrams from the centralized Results/results.csv.
 
-    Renders one PNG per checked horizon method, reading the ResNet declination columns:
-        do_hwt  -> 'Declination Resnet Model HWT (deg)'  -> curvigram_declination_hwt.png
-        do_srtm -> 'Declination Resnet Model SRTM (deg)' -> curvigram_declination_srtm.png
+    Renders one PNG per checked horizon method, reading the declination columns of
+    *model* ('Resnet Model' by default, 'Line Model' for line input):
+        do_hwt   -> 'Declination <model> HWT (deg)'   -> curvigram_declination_hwt.png
+        do_srtm  -> 'Declination <model> SRTM (deg)'  -> curvigram_declination_srtm.png
+        do_lidar -> 'Declination <model> LIDAR (deg)' -> curvigram_declination_lidar.png
 
     Returns {method: figure_path, ...} for the curvigrams actually produced.
     """
@@ -337,9 +341,12 @@ def run_declination_curvigrams(
 
     targets = []
     if do_hwt:
-        targets.append(("HWT", "Declination Resnet Model HWT (deg)", "curvigram_declination_hwt.png"))
+        targets.append(("HWT", "Declination {} HWT (deg)".format(model), "curvigram_declination_hwt.png"))
     if do_srtm:
-        targets.append(("SRTM", "Declination Resnet Model SRTM (deg)", "curvigram_declination_srtm.png"))
+        targets.append(("SRTM", "Declination {} SRTM (deg)".format(model), "curvigram_declination_srtm.png"))
+    if do_lidar:
+        targets.append(("LIDAR", "Declination {} LIDAR (deg)".format(model), "curvigram_declination_lidar.png"))
+    label = "ResNet" if model == "Resnet Model" else model.replace(" Model", "")
 
     out: Dict[str, str] = {}
     _progress(0)
@@ -356,7 +363,7 @@ def run_declination_curvigrams(
             h_eff_deg=h_eff_deg,
             iterations=iterations,
             save_path=fig_path,
-            title="Declination Curvigram: ResNet ({})".format(method),
+            title="Declination Curvigram: {} ({})".format(label, method),
         )
         out[method] = fig_path
         _progress(int(100 * idx / max(1, len(targets))))
