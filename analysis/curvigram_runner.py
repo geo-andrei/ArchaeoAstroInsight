@@ -380,8 +380,8 @@ def _plot_declination_curvigram(declinations, *, latitude, h_eff_deg, iterations
     except Exception as e:
         raise ImportError(
             "The 'astrocult' package (and its dependency 'skyfield') is required for "
-            "declination curvigrams. Install them by running 02_install_global_admin.bat "
-            "as Administrator, then restart QGIS. (original import error: {})".format(e)
+            "declination curvigrams. Install them with the installer scripts from "
+            "https://github.com/geo-andrei/ArchaeoAstroInsight (see README), then restart QGIS. (original import error: {})".format(e)
         )
 
     decl = np.asarray(declinations, dtype=float).ravel()

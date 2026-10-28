@@ -35,8 +35,9 @@ def _astrocult():
     except Exception as e:  # ImportError (astrocult/multipledispatch absent) or other
         raise ImportError(
             "The 'astrocult' package (and its dependency 'multipledispatch') is "
-            "required for curvigrams. Install them into QGIS's Python by running "
-            "02_install_global_admin.bat as Administrator, then restart QGIS. "
+            "required for curvigrams. Install them into QGIS's Python with the installer "
+            "scripts from https://github.com/geo-andrei/ArchaeoAstroInsight (see README), "
+            "then restart QGIS. "
             f"(original import error: {e})"
         )
     return Azimuth(), HelperFunctions

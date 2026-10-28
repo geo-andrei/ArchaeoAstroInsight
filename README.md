@@ -56,12 +56,13 @@ However you install it, the plugin folder must be named exactly **`ArchaeoAstroI
 
 ### Option A: From the QGIS Plugin Repository
 
-Installing through **QGIS → Plugins → Manage and Install Plugins** places the plugin (these `.bat` scripts included) inside your QGIS profile, but QGIS does **not** install the heavy Python dependencies, so the plugin will not run until you do:
+Installing through **QGIS → Plugins → Manage and Install Plugins** places the plugin inside your QGIS profile, but QGIS does **not** install the heavy Python dependencies, and the installer `.bat` scripts are **not** included in the QGIS Plugin Repository package (the repository does not accept installer scripts). Get them from GitHub:
 
-1. In QGIS, go to **Settings → User Profiles → Open Active Profile Folder**, then open `python\plugins\ArchaeoAstroInsight`. (Full path: `%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\ArchaeoAstroInsight`.)
-2. Right-click **`01_build_wheels_admin.bat`** → **Run as administrator** (downloads the dependency wheels; needs internet).
-3. Right-click **`02_install_global_admin.bat`** → **Run as administrator** (installs the dependencies; it detects that the plugin is already in your profile and skips the copy step).
-4. Restart QGIS, then tick **ArchaeoAstroInsight** under **Plugins → Manage and Install Plugins → Installed**.
+1. Download this repository from GitHub (**Code → Download ZIP**) and extract it, keeping the folder name **`ArchaeoAstroInsight`**.
+2. Close QGIS.
+3. In the extracted folder, right-click **`01_build_wheels_admin.bat`** → **Run as administrator** (downloads the dependency wheels; needs internet).
+4. Right-click **`02_install_global_admin.bat`** → **Run as administrator** (installs the dependencies and refreshes the plugin copy in your QGIS profile with the downloaded one).
+5. Start QGIS, then tick **ArchaeoAstroInsight** under **Plugins → Manage and Install Plugins → Installed**.
 
 ### Option B: Manual install (from GitHub or a downloaded copy)
 

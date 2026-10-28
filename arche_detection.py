@@ -335,9 +335,9 @@ class ArcheDetection:
             "ArchaeoAstroInsight - missing dependencies",
             "ArchaeoAstroInsight needs additional Python packages that are not "
             "installed in QGIS's Python yet:" + detail + "\n\n"
-            "Please run the installer (02_install_global_admin.bat as "
-            "Administrator), or follow the installation steps in the plugin "
-            "README, then restart QGIS."
+            "Please follow the installation steps in the plugin README "
+            "(https://github.com/geo-andrei/ArchaeoAstroInsight): download the "
+            "installer scripts and run them as Administrator, then restart QGIS."
         )
         return False
 
