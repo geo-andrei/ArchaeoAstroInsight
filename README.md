@@ -4,6 +4,12 @@
 
 ArchaeoAstroInsight detects features in satellite or aerial rasters using a YOLO model, estimates each feature's orientation (azimuth) with a ResNet classifier (or reads it directly from lines you draw), derives the local horizon from the HeyWhatsThat online service, user-provided SRTM elevation data and/or LiDAR point clouds, and computes the astronomical declination of each alignment. It also generates azimuth and declination curvigrams (kernel-density plots with significance thresholds) and writes all results to a single CSV for further analysis.
 
+## Citation
+
+If you use ArchaeoAstroInsight in your research, please cite our [ACM paper](https://dl.acm.org/doi/10.1145/3848508):
+
+> Marc Frincu, Maitane Urrutia-Aparicio, Andrei Ancuta, Helga Hochbauer, and Andres Asensio Ramos. 2026. Large Scale ML-driven Detection and Orientation Analysis of Remote Heritage Sites: Case Study in Al-Hayit, Saudi Arabia. *J. Comput. Cult. Herit.* Just Accepted (September 2026). https://doi.org/10.1145/3848508
+
 ## What's new in 0.3
 
 - **Line layers as input:** draw a line along each feature; its drawn direction (first → last vertex) is used as the azimuth, so no YOLO or ResNet model is needed. See [Quick start (line layer)](#quick-start-line-layer-no-models).
